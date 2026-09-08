@@ -4,7 +4,7 @@
  * Contract: https://docs.piratepress.fun (PRD-api §4, frozen /public/v1).
  *
  * Config via env:
- *   PIRATEPRESS_API_KEY  (required) — key from @PiratePressBot, /apikey
+ *   PIRATEPRESS_API_KEY  (required) — key from @piratepress_bot, /apikey
  *   PIRATEPRESS_API_URL  (optional) — default https://api.piratepress.fun
  */
 
@@ -19,7 +19,7 @@ const API_URL = (process.env.PIRATEPRESS_API_URL || "https://api.piratepress.fun
 if (!API_KEY) {
   console.error(
     "piratepress-mcp: PIRATEPRESS_API_KEY is not set. " +
-      "Get a key in @PiratePressBot (Telegram) with the /apikey command."
+      "Get a key in @piratepress_bot (Telegram) with the /apikey command."
   );
   process.exit(1);
 }
@@ -65,7 +65,7 @@ async function api(path, { method = "GET", body, idempotencyKey } = {}) {
 
   if (res.status === 402 || code === "insufficient_funds") {
     throw new Error(
-      `Insufficient balance (${message}). Top up dublones in @PiratePressBot (Telegram) — 1⛁ = 1₽.`
+      `Insufficient balance (${message}). Top up dublones in @piratepress_bot (Telegram) — 1⛁ = 1₽.`
     );
   }
   if (res.status === 429) {
@@ -77,7 +77,7 @@ async function api(path, { method = "GET", body, idempotencyKey } = {}) {
   }
   if (res.status === 401) {
     throw new Error(
-      "API key rejected (401). Check PIRATEPRESS_API_KEY or issue a new key in @PiratePressBot via /apikey."
+      "API key rejected (401). Check PIRATEPRESS_API_KEY or issue a new key in @piratepress_bot via /apikey."
     );
   }
   throw new Error(`PiratePress API error [${code || res.status}]: ${message}`);
@@ -270,7 +270,7 @@ server.registerTool(
     title: "Get balance",
     description:
       "Wallet state (GET /balance): {dublones, subscription, fair_use_left}. 1⛁ = 1₽; " +
-      "top-ups happen in @PiratePressBot. Check this before batch generation.",
+      "top-ups happen in @piratepress_bot. Check this before batch generation.",
     inputSchema: {},
   },
   async () => {

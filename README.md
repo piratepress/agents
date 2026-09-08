@@ -15,7 +15,7 @@ Docs: **https://docs.piratepress.fun** · OpenAPI: `https://api.piratepress.fun/
 
 ## Get an API key
 
-In Telegram: **[@PiratePressBot](https://t.me/piratepress_bot) → `/apikey`**.
+In Telegram: **[@piratepress_bot](https://t.me/piratepress_bot) → `/apikey`**.
 The key looks like `pp_…` and is shown once. Balance top-ups also happen in the bot (1⛁ = 1₽).
 
 ## Install (one-liner)

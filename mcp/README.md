@@ -17,7 +17,7 @@ Generation takes minutes (usually 2–15). Money (dublones) is charged when the 
 
 ## Getting an API key
 
-In Telegram: **@PiratePressBot → `/apikey`**. The key looks like `pp_…` and is shown once.
+In Telegram: **@piratepress_bot → `/apikey`**. The key looks like `pp_…` and is shown once.
 Balance top-ups also happen in the bot.
 
 ## Install & configure
@@ -113,7 +113,7 @@ Add to your MCP config (`~/.kimi-code/mcp.json` or via the CLI):
 
 ## Errors
 
-- `402 insufficient_funds` — not enough dublones; top up in @PiratePressBot (1⛁ = 1₽).
+- `402 insufficient_funds` — not enough dublones; top up in @piratepress_bot (1⛁ = 1₽).
 - `429 rate_limited` — limits are 10 active jobs and 30 POST/min; the server surfaces `Retry-After`.
 - `401` — key missing/revoked; issue a new one via `/apikey` in the bot.
 
@@ -127,7 +127,7 @@ MCP-сервер для публичного API PiratePress: агент (Claude
 генерирует вирусные ролики инструментами `generate_video`, `quick_video`, `get_video_status`,
 `wait_video`, `get_balance`.
 
-- Ключ — в боте **@PiratePressBot**, команда `/apikey`. Туда же — пополнение баланса (1⛁ = 1₽).
+- Ключ — в боте **@piratepress_bot**, команда `/apikey`. Туда же — пополнение баланса (1⛁ = 1₽).
 - Установка одной строкой: `curl -fsSL https://piratepress.fun/install.sh | PIRATEPRESS_API_KEY=pp_… bash`
   (MCP-сервер в `~/.piratepress/mcp/`, скилл в `~/.agents/skills/`, авто-регистрация в Claude Code).
   Ручной конфиг — JSON выше (`node ~/.piratepress/mcp/index.js` + env `PIRATEPRESS_API_KEY`).

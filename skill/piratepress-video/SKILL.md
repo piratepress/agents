@@ -19,7 +19,7 @@ curl — same API, less bookkeeping. The flows below stay identical. One-liner i
 
 You need `PIRATEPRESS_API_KEY`. If it is not in the environment, ask the user:
 
-> Пришлите API-ключ PiratePress: в Telegram-боте **@PiratePressBot** выполните команду
+> Пришлите API-ключ PiratePress: в Telegram-боте **@piratepress_bot** выполните команду
 > `/apikey` — ключ вида `pp_…` показывается один раз.
 
 Never invent a key, never store it in the repo. Use it as the `X-API-Key` header.
@@ -71,7 +71,7 @@ CTA requires placement), `hook`, `cta`. Also `music`, `bg_ai`, `reference_url`
 ## 2. Money — check before you spend
 
 - Currency is **dublones: 1⛁ = 1₽**. Charged at job **creation**, not completion.
-- Top-up is only in the bot (@PiratePressBot) — you cannot add funds via the API.
+- Top-up is only in the bot (@piratepress_bot) — you cannot add funds via the API.
 - **Before any batch**, read the balance and quote the user the projected cost:
 
 ```bash
@@ -120,7 +120,7 @@ Errors come as `{"error": {"code", "message"}}`.
 
 | Situation | Action |
 |---|---|
-| `402 insufficient_funds` | Tell the user the cost and ask them to top up in @PiratePressBot (1⛁ = 1₽). Do not retry until they confirm. |
+| `402 insufficient_funds` | Tell the user the cost and ask them to top up in @piratepress_bot (1⛁ = 1₽). Do not retry until they confirm. |
 | `429 rate_limited` | Read the `Retry-After` header and wait exactly that long. Limits: 10 active jobs, 30 POST/min. Never hammer. |
 | `409 fair_use_exceeded` | Heavy-video quota on the subscription is exhausted for the month — offer a lighter config (no `bg_ai`, shorter duration) or dublone payment. |
 | `422 invalid_params` | Fix the body per `message` (e.g. `cta` without `placement`) and resubmit with a **new** Idempotency-Key. |

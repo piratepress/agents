@@ -4,7 +4,7 @@
 #
 # One-liner:
 #   curl -fsSL https://piratepress.fun/install.sh | bash
-# With API key (get one via /apikey in @PiratePressBot):
+# With API key (get one via /apikey in @piratepress_bot):
 #   curl -fsSL https://piratepress.fun/install.sh | PIRATEPRESS_API_KEY=pp_... bash
 #
 # What it does:
@@ -80,7 +80,7 @@ fi
 say ""
 say "Done. Next steps:"
 if [ -z "${PIRATEPRESS_API_KEY:-}" ]; then
-  say "  1. Get an API key: /apikey in @PiratePressBot (Telegram)"
+  say "  1. Get an API key: /apikey in @piratepress_bot (Telegram)"
 else
   say "  1. API key was taken from PIRATEPRESS_API_KEY env."
 fi
