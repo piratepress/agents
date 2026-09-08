@@ -8,7 +8,7 @@
     "node": ">=20"
   },
   "bin": {
-    "piratepress-mcp": "./index.js"
+    "piratepress-mcp": "index.js"
   },
   "files": [
     "index.js",
