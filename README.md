@@ -7,9 +7,10 @@ This repo ships two things:
 
 - **`mcp/`** — an MCP server (`@piratepress/mcp`) exposing five tools:
   `generate_video`, `quick_video`, `get_video_status`, `wait_video`, `get_balance`.
-- **`skill/piratepress-video/`** — an agent skill (`SKILL.md`) that teaches any
+- **`skills/piratepress-video/`** — an agent skill (`SKILL.md`) that teaches any
   coding agent the API flows: one-shot videos, explicit-param jobs
-  (placement/hook/cta), batch generation, budget checks.
+  (placement/hook/cta), batch generation, budget checks. Installable via the
+  [skills CLI](https://github.com/vercel-labs/skills): `npx skills add piratepress/agents`.
 
 Docs: **https://docs.piratepress.fun** · OpenAPI: `https://api.piratepress.fun/docs`
 
@@ -28,6 +29,19 @@ The installer puts the MCP server into `~/.piratepress/mcp/`, the skill into
 `~/.agents/skills/piratepress-video/` (and `~/.claude/skills/` when present), and
 registers the server with the `claude` CLI when available. Nothing outside `$HOME`
 is touched; no sudo. `install.sh` is mirrored in this repo for inspection.
+
+## Install just the skill (any agent)
+
+Via the open [skills CLI](https://skills.sh) (works with Claude Code, Codex,
+Cursor, Kimi Code and 70+ other agents):
+
+```bash
+npx skills add piratepress/agents
+```
+
+This installs the `piratepress-video` skill into your agent's skills directory.
+The MCP server is separate — use the one-liner above or the manual config in
+[`mcp/README.md`](mcp/README.md).
 
 ## Manual install
 

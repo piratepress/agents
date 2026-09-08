@@ -1,6 +1,6 @@
 ---
 name: piratepress-video
-description: Generate viral short-form videos through the PiratePress public API — single clips from a one-line brief, explicit-param jobs (placement/hook/cta), and batch scenarios ("5 videos on these topics", daily digest). Load when the user asks to create/generate a video via PiratePress, batch-generate content, or automate a posting pipeline. Docs: https://docs.piratepress.fun
+description: 'Generate viral short-form videos through the PiratePress public API — single clips from a one-line brief, explicit-param jobs (placement/hook/cta), and batch scenarios ("5 videos on these topics", daily digest). Load when the user asks to create/generate a video via PiratePress, batch-generate content, or automate a posting pipeline. Docs: https://docs.piratepress.fun'
 ---
 
 # PiratePress Video Generation
