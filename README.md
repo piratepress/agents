@@ -1,4 +1,4 @@
-# piratepress-mcp-skill
+# PiratePress for AI agents
 
 Generate viral short-form videos straight from your AI agent (Claude Code, Kimi Code,
 Claude Desktop, Cursor, …) via the [PiratePress](https://piratepress.fun) public API.
@@ -34,8 +34,8 @@ is touched; no sudo. `install.sh` is mirrored in this repo for inspection.
 Requires Node.js 20+ (only for the MCP server; the skill is a plain markdown file).
 
 ```bash
-git clone https://github.com/piratepress/piratepress-mcp-skill.git
-cd piratepress-mcp-skill/mcp && npm install --omit=dev
+git clone https://github.com/piratepress/agents.git
+cd agents/mcp && npm install --omit=dev
 ```
 
 Then point your agent at the server — configs for Claude Code, Claude Desktop and

@@ -85,7 +85,7 @@ Add to your MCP config (`~/.kimi-code/mcp.json` or via the CLI):
   "mcpServers": {
     "piratepress": {
       "command": "node",
-      "args": ["/path/to/piratepress-mcp-skill/mcp/index.js"],
+      "args": ["/path/to/agents/mcp/index.js"],
       "env": { "PIRATEPRESS_API_KEY": "pp_your_key_here" }
     }
   }
