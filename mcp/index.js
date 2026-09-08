@@ -9,9 +9,16 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
+
+const PKG = JSON.parse(
+  readFileSync(join(dirname(fileURLToPath(import.meta.url)), "package.json"), "utf8")
+);
 
 const API_KEY = process.env.PIRATEPRESS_API_KEY;
 const API_URL = (process.env.PIRATEPRESS_API_URL || "https://api.piratepress.fun").replace(/\/+$/, "");
@@ -95,7 +102,7 @@ function fail(err) {
 
 const server = new McpServer({
   name: "piratepress",
-  version: "0.1.0",
+  version: PKG.version,
 });
 
 server.registerTool(
