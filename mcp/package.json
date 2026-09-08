@@ -1,0 +1,34 @@
+{
+  "name": "@piratepress/mcp",
+  "version": "0.1.0",
+  "description": "MCP server for the PiratePress public API — generate viral short videos from AI agents (Claude Code, Kimi Code, Claude Desktop, …)",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "piratepress-mcp": "./index.js"
+  },
+  "files": [
+    "index.js",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/piratepress/piratepress-mcp-skill.git",
+    "directory": "mcp"
+  },
+  "homepage": "https://docs.piratepress.fun",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "piratepress",
+    "video-generation",
+    "ai-agents"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.0",
+    "zod": "^3.25.0 || ^4.0.0"
+  }
+}
