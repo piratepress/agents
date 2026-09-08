@@ -47,7 +47,10 @@ curl -sS https://api.piratepress.fun/public/v1/videos/<id> \
 # status: queued | running | awaiting_review | done | error
 
 # 3. On done — download immediately; result_url is signed and dies in 7 days.
-wget -O video.mp4 "<result_url>"
+#    Use the result_url VERBATIM from the fresh JSON response — it is an
+#    absolute URL; never rebuild, trim or reassemble it from parts, and never
+#    reuse a copy from truncated log output (a cut-off token → 401 invalid_token).
+curl -fsSL -o video.mp4 "<result_url>"   # wget -O video.mp4 "<result_url>" works too
 ```
 
 `metadata` in the final object is the posting pack (title/description/hashtags) —
