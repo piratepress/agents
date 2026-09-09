@@ -11,8 +11,9 @@ parameter reference lives at **https://docs.piratepress.fun** (OpenAPI:
 `https://api.piratepress.fun/docs`) — check there before using a parameter not shown here.
 
 **MCP alternative:** if the `piratepress` MCP server is installed in this environment,
-prefer its tools (`quick_video`, `generate_video`, `wait_video`, `get_balance`) over raw
-curl — same API, less bookkeeping. The flows below stay identical. One-liner install:
+prefer its tools (`quick_video`, `generate_video`, `wait_video`, `get_video_status`,
+`review_video`, `list_assets`, `get_balance`) over raw curl — same API, less
+bookkeeping. The flows below stay identical. One-liner install:
 `curl -fsSL https://piratepress.fun/install.sh | bash`.
 
 ## 0. Get the API key
@@ -71,7 +72,19 @@ curl -sS -X POST https://api.piratepress.fun/public/v1/videos \
 
 Key params: `theme` (full sentence — one-word input yields garbage), `lang` (ru|en),
 `duration` ("30" or "15-45"), `placement` (product woven natively into the story —
-CTA requires placement), `hook`, `cta`. Also `music` and more — see the docs.
+CTA requires placement), `hook`, `cta`.
+
+Full `POST /videos` surface (everything is optional except a content source —
+`theme`, `theme_url` or `reference_url`):
+
+| Group | Params |
+|---|---|
+| Content | `theme`, `theme_url`, `lang` (ru\|en), `duration`, `style` (delivery), `genre` |
+| Advertising | `placement`, `hook`, `end_card`, `cta`, `cta_target_type` (bot\|site), `cta_target`, `cta_word`, `cta_limit` |
+| Background & visual | `bg_ai`, `bg_preset`, `bg_fit` (fill\|fit), `overlays`, `overlay_count` (1–5), `overlay_level` (1–3), `visual_style` |
+| Captions | `caption_mode` (word\|karaoke\|line), `caption_position` (top\|center\|bottom), `caption_scale` (0.01–0.2) |
+| Music & voice | `music` (none\|ai\|song — "song" sings the story as a track), `music_mood`, `voice_asset_id` (voice clone from the library — see below) |
+| Misc | `director_mode` (pause for script review), `count` (1–50, batch in one order), `watermark` |
 
 **AI background (`bg_ai`).** Two values: `"illustrations"` — AI art generated per
 scene; `"lite"` — the same scenes animated image-to-video ("living video" — pricier,
@@ -133,6 +146,33 @@ same job polls and saves the mp4 + metadata into the user's content folder.
 - `hook: true` (default) — first-seconds hook; keep it on for feed traffic.
 - `cta: true` — end-card call to action; **requires `placement`**, and `cta_target`
   (`bot` | `site` + URL/handle) tells where to send viewers.
+
+### Director mode (script review)
+
+With `director_mode: true` the job pauses after the script at `awaiting_review`
+(the MCP `wait_video` returns there too). Continue with:
+
+```bash
+curl -sS -X POST .../videos/<id>/review -H "X-API-Key: $PIRATEPRESS_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"action": "approve"}'              # or {"action":"edit","text":"…"} / {"action":"regen","note":"…"}
+```
+
+`409 not_awaiting_review` means the job is not waiting for a decision right now.
+
+### Voice clones and the media library
+
+`voice_asset_id` takes an asset id from the user's library — list it via
+`GET /assets` (MCP: `list_assets`). Uploading new assets (voice clone from a
+10-second sample, banners) happens **in the bot only** — the public API has no
+upload endpoint.
+
+### Bot-only (not in the public API)
+
+Top-ups and subscriptions, asset uploads, banner overlay / AI banner / AI cover,
+custom background URLs, and channel autopilot (scheduled posting) live in
+@piratepress_bot. If the user asks for one of these — point them to the bot
+instead of improvising; everything else an order needs is in the params table above.
 
 ## 4. Errors and what to do
 

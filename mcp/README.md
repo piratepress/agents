@@ -7,10 +7,12 @@ The server talks to `https://api.piratepress.fun/public/v1` and exposes five too
 
 | Tool | What it does |
 |---|---|
-| `generate_video` | Create a job with explicit params (`theme`/`theme_url`/`reference_url`, `lang`, `duration`, `placement`, `hook`, `cta`). Returns `{id, cost, eta_seconds}`. |
+| `generate_video` | Create a job with explicit params (`theme`/`theme_url`/`reference_url`, `lang`, `duration`, `placement`, `hook`, `cta`, `bg_ai`, `music`, `director_mode`, `count`, … — the full `POST /videos` surface). Returns `{id, cost, eta_seconds}`. |
 | `quick_video` | One free-form `prompt` — a server-side LLM maps it to parameters. Best default for one-shot requests. |
 | `get_video_status` | Poll a job: `queued → running → done/error/refunded` (also `awaiting_review` in director mode; `refunded` = failed, doubloons auto-refunded). On `done`: `result_url` (signed mp4, TTL 7 days) + `metadata` (posting texts). |
-| `wait_video` | Block until `done`/`error`/`refunded` (polls every 20 s, MCP progress notifications, default timeout 30 min). |
+| `wait_video` | Block until `done`/`error`/`refunded`/`awaiting_review` (polls every 20 s, MCP progress notifications, default timeout 30 min). |
+| `review_video` | Answer a script review in director mode: `approve` / `edit` / `regen`. |
+| `list_assets` | User's media library (voice clones etc.) — ids for `voice_asset_id`. |
 | `get_balance` | Wallet: `{dublones, subscription, fair_use_left}`. 1⛁ = 1₽. |
 
 Generation takes minutes (usually 2–15). Money (dublones) is charged when the job is **created**.

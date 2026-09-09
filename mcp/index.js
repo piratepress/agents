@@ -113,6 +113,7 @@ server.registerTool(
       "Create a PiratePress video generation job (POST /videos). Money is charged on creation. " +
       "Returns {id, cost, eta_seconds}; generation takes minutes — poll with get_video_status or wait_video.",
     inputSchema: {
+      // Контент
       theme: z.string().min(3).describe("What the video is about — a full sentence, not one word."),
       theme_url: z
         .array(z.string().url())
@@ -128,16 +129,43 @@ server.registerTool(
         .string()
         .optional()
         .describe('Seconds or range, e.g. "30" or "15-45" (default "15-45").'),
+      style: z.string().optional().describe("Delivery style (default: Reddit storytelling)."),
+      genre: z.string().max(200).optional().describe("Story genre (e.g. horror, comedy, confession)."),
+      // Реклама
       placement: z
         .string()
         .optional()
         .describe("Product/brand to weave natively into the story (adveristor placement)."),
       hook: z.boolean().optional().describe("Add a hook in the first seconds (default true)."),
+      end_card: z.boolean().optional().describe("Add an end card (default true)."),
       cta: z.boolean().optional().describe("Add a call-to-action at the end (requires placement)."),
+      cta_target_type: z.enum(["bot", "site"]).optional().describe("Where the CTA sends viewers (default bot)."),
+      cta_target: z.string().optional().describe("CTA destination: bot handle or site URL."),
+      cta_word: z.string().optional().describe("Code word for CTA attribution (viewers send it to the bot)."),
+      cta_limit: z.number().int().min(1).optional().describe("Max redemptions of the code word."),
+      // Фон и визуал
       bg_ai: z
         .enum(["illustrations", "lite"])
         .optional()
         .describe("AI-generated background instead of stock gameplay: 'illustrations' = AI art per scene; 'lite' = the same scenes animated image-to-video (living video — pricier, counts as a heavy job under the subscription fair-use quota)."),
+      bg_preset: z.string().max(100).optional().describe("Stock background preset id (gameplay/satisfying packs)."),
+      bg_fit: z.enum(["fill", "fit"]).optional().describe("Background framing: crop-fill (default) or fit whole frame."),
+      overlays: z.boolean().optional().describe("Add infographic overlays (default false)."),
+      overlay_count: z.number().int().min(1).max(5).optional().describe("How many overlays (1-5, default 3; needs overlays: true)."),
+      overlay_level: z.number().int().min(1).max(3).optional().describe("Overlay richness level 1-3 (default 1)."),
+      visual_style: z.string().max(200).optional().describe("Visual style prompt for AI scenes (e.g. 'knitted amigurumi, stop-motion')."),
+      // Субтитры
+      caption_mode: z.enum(["word", "karaoke", "line"]).optional().describe("Captions: current word only | karaoke word highlight | whole line."),
+      caption_position: z.enum(["top", "center", "bottom"]).optional().describe("Caption placement on the frame."),
+      caption_scale: z.number().gt(0.01).max(0.2).optional().describe("Caption size as a fraction of frame height (0.01-0.2)."),
+      // Музыка и голос
+      music: z.enum(["none", "ai", "song"]).optional().describe("Soundtrack: none (default) | AI background music | song — the story sung as a track."),
+      music_mood: z.string().max(200).optional().describe("Music mood prompt (default: auto from the story)."),
+      voice_asset_id: z.string().optional().describe("Voice clone asset id from the user's library (list via list_assets; clones are uploaded in the bot)."),
+      // Прочее
+      director_mode: z.boolean().optional().describe("Pause after the script for review: the job stops at awaiting_review — continue with review_video."),
+      count: z.number().int().min(1).max(50).optional().describe("Batch: N videos of the same config in one order (1-50, default 1)."),
+      watermark: z.string().optional().describe("Custom watermark text (paid orders; trial videos always carry the service watermark)."),
     },
   },
   async (args) => {
@@ -214,8 +242,9 @@ server.registerTool(
   {
     title: "Wait for video",
     description:
-      "Block until the job reaches done/error (polls every 20s, respects eta and Retry-After). " +
-      "Returns the final job object with result_url. Generation usually takes 2–15 minutes.",
+      "Block until the job reaches done/error/refunded/awaiting_review (polls every 20s, respects eta and Retry-After). " +
+      "Returns the final job object with result_url. If it stops at awaiting_review (director mode), continue with review_video. " +
+      "Generation usually takes 2–15 minutes.",
     inputSchema: {
       id: z.string().describe("Job id returned by generate_video / quick_video."),
       timeout_seconds: z
@@ -282,6 +311,52 @@ server.registerTool(
         await sleep(POLL_INTERVAL_MS);
         waited += POLL_INTERVAL_MS / 1000;
       }
+    } catch (err) {
+      return fail(err);
+    }
+  }
+);
+
+server.registerTool(
+  "review_video",
+  {
+    title: "Review script (director mode)",
+    description:
+      "Answer a script review for a job paused at awaiting_review (POST /videos/{id}/review): " +
+      "approve — continue as is; edit — continue with your edited script (text required); " +
+      "regen — rewrite the script (note = your wish). 409 means the job is not awaiting review.",
+    inputSchema: {
+      id: z.string().describe("Job id in awaiting_review status."),
+      action: z.enum(["approve", "edit", "regen"]),
+      text: z.string().optional().describe("Full edited script text (required for action=edit)."),
+      note: z.string().optional().describe("Wish for the rewrite (only for action=regen)."),
+    },
+  },
+  async ({ id, action, text, note }) => {
+    try {
+      const body = { action };
+      if (text !== undefined) body.text = text;
+      if (note !== undefined) body.note = note;
+      return ok(await api(`/videos/${encodeURIComponent(id)}/review`, { method: "POST", body }));
+    } catch (err) {
+      return fail(err);
+    }
+  }
+);
+
+server.registerTool(
+  "list_assets",
+  {
+    title: "List media library",
+    description:
+      "List the user's media library (GET /assets): voice clones, banners, etc. " +
+      "Use an asset id as voice_asset_id in generate_video. New assets are uploaded in the bot — " +
+      "the public API has no upload.",
+    inputSchema: {},
+  },
+  async () => {
+    try {
+      return ok(await api("/assets"));
     } catch (err) {
       return fail(err);
     }
