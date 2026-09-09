@@ -223,7 +223,8 @@ server.registerTool(
     description:
       "Poll a generation job (GET /videos/{id}). Statuses: queued | running | awaiting_review | done | error | refunded " +
       "(refunded = failed with the doubloons auto-refunded to the balance). " +
-      "On done returns result_url (signed mp4 link, TTL 7 days — download it) and metadata (posting texts).",
+      "On done returns result_url (signed mp4 link, TTL 7 days — download it) and metadata (posting texts). " +
+      "On awaiting_review returns story_text — the script under review; show it to the user before deciding.",
     inputSchema: {
       id: z.string().describe("Job id returned by generate_video / quick_video."),
     },
@@ -243,7 +244,8 @@ server.registerTool(
     title: "Wait for video",
     description:
       "Block until the job reaches done/error/refunded/awaiting_review (polls every 20s, respects eta and Retry-After). " +
-      "Returns the final job object with result_url. If it stops at awaiting_review (director mode), continue with review_video. " +
+      "Returns the final job object with result_url. If it stops at awaiting_review (director mode), the object includes " +
+      "story_text — the script under review; show it to the user, then continue with review_video. " +
       "Generation usually takes 2–15 minutes.",
     inputSchema: {
       id: z.string().describe("Job id returned by generate_video / quick_video."),
@@ -324,7 +326,8 @@ server.registerTool(
     description:
       "Answer a script review for a job paused at awaiting_review (POST /videos/{id}/review): " +
       "approve — continue as is; edit — continue with your edited script (text required); " +
-      "regen — rewrite the script (note = your wish). 409 means the job is not awaiting review.",
+      "regen — rewrite the script (note = your wish). 409 means the job is not awaiting review. " +
+      "The script itself is in story_text of get_video_status/wait_video — read it first, never approve blind.",
     inputSchema: {
       id: z.string().describe("Job id in awaiting_review status."),
       action: z.enum(["approve", "edit", "regen"]),

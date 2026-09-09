@@ -150,7 +150,9 @@ same job polls and saves the mp4 + metadata into the user's content folder.
 ### Director mode (script review)
 
 With `director_mode: true` the job pauses after the script at `awaiting_review`
-(the MCP `wait_video` returns there too). Continue with:
+(the MCP `wait_video` returns there too). The status response then carries the
+script itself in `story_text` — **read it and show it to the user before
+deciding**; never approve blind. Continue with:
 
 ```bash
 curl -sS -X POST .../videos/<id>/review -H "X-API-Key: $PIRATEPRESS_API_KEY" \
@@ -187,7 +189,7 @@ Errors come as `{"error": {"code", "message"}}`.
 | `401` | Key missing/revoked — ask the user for a fresh one (`/apikey`). |
 | Job `status: "error"` | Report the `error` field. The job failed with no doubloon charge (trial or externally paid). Do not auto-retry paid generations without asking. |
 | Job `status: "refunded"` | The job failed and the charge was **auto-refunded** — the `error` field says so, and `GET /balance` confirms it. Tell the user no doubloons were lost; never report it as money gone, and ask before resubmitting. |
-| `awaiting_review` | Director mode paused for script review — see docs for `POST /videos/{id}/review`, or tell the user to approve in the bot. |
+| `awaiting_review` | Director mode paused for script review — the same response includes `story_text`; show it to the user, then answer via `POST /videos/{id}/review` (MCP: `review_video`). |
 
 Hard rules: poll interval ≥ 15 s (aim 20–30), honor `eta_seconds` and `Retry-After`,
 one Idempotency-Key per logical job, download `result_url` before its 7-day TTL ends.
