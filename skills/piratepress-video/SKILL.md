@@ -71,7 +71,13 @@ curl -sS -X POST https://api.piratepress.fun/public/v1/videos \
 
 Key params: `theme` (full sentence — one-word input yields garbage), `lang` (ru|en),
 `duration` ("30" or "15-45"), `placement` (product woven natively into the story —
-CTA requires placement), `hook`, `cta`. Also `music`, `bg_ai` and more — see the docs.
+CTA requires placement), `hook`, `cta`. Also `music` and more — see the docs.
+
+**AI background (`bg_ai`).** Two values: `"illustrations"` — AI art generated per
+scene; `"lite"` — the same scenes animated image-to-video ("living video" — pricier,
+counts as a heavy job under subscription fair-use). Without `bg_ai` the video gets a
+stock gameplay/satisfying background. Note: animating a USER-UPLOADED photo is not in
+the public API — `bg_ai: "lite"` animates scenes the service generates itself.
 
 **Links as input.** The server does not "watch" arbitrary URLs inside a free-form
 prompt — route them explicitly (quick_video does this mapping for you, but explicit

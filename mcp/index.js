@@ -134,6 +134,10 @@ server.registerTool(
         .describe("Product/brand to weave natively into the story (adveristor placement)."),
       hook: z.boolean().optional().describe("Add a hook in the first seconds (default true)."),
       cta: z.boolean().optional().describe("Add a call-to-action at the end (requires placement)."),
+      bg_ai: z
+        .enum(["illustrations", "lite"])
+        .optional()
+        .describe("AI-generated background instead of stock gameplay: 'illustrations' = AI art per scene; 'lite' = the same scenes animated image-to-video (living video — pricier, counts as a heavy job under the subscription fair-use quota)."),
     },
   },
   async (args) => {
