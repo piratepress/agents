@@ -110,7 +110,9 @@ server.registerTool(
   {
     title: "Generate video",
     description:
-      "Create a PiratePress video generation job (POST /videos). Money is charged on creation. " +
+      "Create a PiratePress video generation job (POST /videos). RECOMMENDED DEFAULT — you pick the params " +
+      "explicitly, so cost and config are predictable (quick_video's server-side mapping can drift off-topic " +
+      "and is throttled). Money is charged on creation. " +
       "Returns {id, cost, eta_seconds}; generation takes minutes — poll with get_video_status or wait_video.",
     inputSchema: {
       // Контент
@@ -148,7 +150,7 @@ server.registerTool(
         .enum(["illustrations", "lite"])
         .optional()
         .describe("AI-generated background instead of stock gameplay: 'illustrations' = AI art per scene; 'lite' = the same scenes animated image-to-video (living video — pricier, counts as a heavy job under the subscription fair-use quota)."),
-      bg_preset: z.string().max(100).optional().describe("Stock background preset id (gameplay/satisfying packs)."),
+      bg_preset: z.string().max(100).optional().describe("Stock background preset id (gameplay/satisfying packs) — get valid ids from list_bg_presets; omit for a random preset."),
       bg_fit: z.enum(["fill", "fit"]).optional().describe("Background framing: crop-fill (default) or fit whole frame."),
       overlays: z.boolean().optional().describe("Add infographic overlays (default false)."),
       overlay_count: z.number().int().min(1).max(5).optional().describe("How many overlays (1-5, default 3; needs overlays: true)."),
@@ -189,7 +191,10 @@ server.registerTool(
     description:
       "Create a video from a single free-form prompt (POST /videos:quick) — the server-side LLM maps " +
       "it to parameters. Links in the prompt are routed automatically: page/article URLs become the content " +
-      "source, video URLs (YouTube/TikTok) clone the format. Best default for one-shot requests. " +
+      "source, video URLs (YouTube/TikTok) clone the format. " +
+      "Use ONLY for vague one-liners where the user does not care about the exact config: the mapping can " +
+      "drift off-topic, the cost is known only after creation, and the mapper is throttled to a few calls " +
+      "per hour (429) — for anything specific or batched prefer generate_video. " +
       "Same response as generate_video.",
     inputSchema: {
       prompt: z
@@ -360,6 +365,24 @@ server.registerTool(
   async () => {
     try {
       return ok(await api("/assets"));
+    } catch (err) {
+      return fail(err);
+    }
+  }
+);
+
+server.registerTool(
+  "list_bg_presets",
+  {
+    title: "List background presets",
+    description:
+      "List stock background presets (GET /bg-presets): [{name, videos}] — valid ids for bg_preset " +
+      "in generate_video. Live catalog from the generator; omit bg_preset for a random preset.",
+    inputSchema: {},
+  },
+  async () => {
+    try {
+      return ok(await api("/bg-presets"));
     } catch (err) {
       return fail(err);
     }

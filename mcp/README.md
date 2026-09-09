@@ -7,12 +7,13 @@ The server talks to `https://api.piratepress.fun/public/v1` and exposes five too
 
 | Tool | What it does |
 |---|---|
-| `generate_video` | Create a job with explicit params (`theme`/`theme_url`/`reference_url`, `lang`, `duration`, `placement`, `hook`, `cta`, `bg_ai`, `music`, `director_mode`, `count`, … — the full `POST /videos` surface). Returns `{id, cost, eta_seconds}`. |
-| `quick_video` | One free-form `prompt` — a server-side LLM maps it to parameters. Best default for one-shot requests. |
-| `get_video_status` | Poll a job: `queued → running → done/error/refunded` (also `awaiting_review` in director mode; `refunded` = failed, doubloons auto-refunded). On `done`: `result_url` (signed mp4, TTL 7 days) + `metadata` (posting texts). |
+| `generate_video` | **Recommended default.** Create a job with explicit params (`theme`/`theme_url`/`reference_url`, `lang`, `duration`, `placement`, `hook`, `cta`, `bg_ai`, `music`, `director_mode`, `count`, … — the full `POST /videos` surface). Predictable config and cost. Returns `{id, cost, eta_seconds}`. |
+| `quick_video` | One free-form `prompt` — a server-side LLM maps it to parameters. Only for vague one-liners: the mapping can drift off-topic, cost is known only after creation, and the mapper is throttled to a few calls/hour. Prefer `generate_video`. |
+| `get_video_status` | Poll a job: `queued → running → done/error/refunded` (also `awaiting_review` in director mode; `refunded` = failed, doubloons auto-refunded). On `done`: `result_url` (signed mp4, TTL 7 days) + `metadata` (posting texts). On `awaiting_review`: `story_text` (the script under review). |
 | `wait_video` | Block until `done`/`error`/`refunded`/`awaiting_review` (polls every 20 s, MCP progress notifications, default timeout 30 min). |
-| `review_video` | Answer a script review in director mode: `approve` / `edit` / `regen`. |
+| `review_video` | Answer a script review in director mode: `approve` / `edit` / `regen` (read `story_text` from the status first). |
 | `list_assets` | User's media library (voice clones etc.) — ids for `voice_asset_id`. |
+| `list_bg_presets` | Stock background presets — valid ids for `bg_preset`. |
 | `get_balance` | Wallet: `{dublones, subscription, fair_use_left}`. 1⛁ = 1₽. |
 
 Generation takes minutes (usually 2–15). Money (dublones) is charged when the job is **created**.

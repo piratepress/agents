@@ -11,8 +11,8 @@ parameter reference lives at **https://docs.piratepress.fun** (OpenAPI:
 `https://api.piratepress.fun/docs`) — check there before using a parameter not shown here.
 
 **MCP alternative:** if the `piratepress` MCP server is installed in this environment,
-prefer its tools (`quick_video`, `generate_video`, `wait_video`, `get_video_status`,
-`review_video`, `list_assets`, `get_balance`) over raw curl — same API, less
+prefer its tools (`generate_video`, `quick_video`, `wait_video`, `get_video_status`,
+`review_video`, `list_assets`, `list_bg_presets`, `get_balance`) over raw curl — same API, less
 bookkeeping. The flows below stay identical. One-liner install:
 `curl -fsSL https://piratepress.fun/install.sh | bash`.
 
@@ -31,14 +31,21 @@ Base URL: `https://api.piratepress.fun/public/v1`
 
 Generation takes **minutes** (usually 2–15). Never block in a tight loop.
 
+**Prefer explicit params (`POST /videos`) over the quick endpoint.** You are an
+agent — mapping the user's brief to parameters is exactly your job; the quick
+endpoint re-does that mapping with a server-side LLM, which can drift off-topic,
+hides the cost until after creation, and is throttled to a few calls per hour.
+Use quick only for genuinely vague one-liners.
+
 ```bash
-# 1. Create the job — free-form prompt, server-side LLM maps it to params.
-#    Idempotency-Key protects against double-charging on retries.
-curl -sS -X POST https://api.piratepress.fun/public/v1/videos:quick \
+# 1. Create the job — explicit params. Idempotency-Key protects against
+#    double-charging on retries.
+curl -sS -X POST https://api.piratepress.fun/public/v1/videos \
   -H "X-API-Key: $PIRATEPRESS_API_KEY" \
   -H "Content-Type: application/json" \
   -H "Idempotency-Key: $(uuidgen)" \
-  -d '{"prompt": "45s EN vertical about why houseplants die in winter, calm tone"}'
+  -d '{"theme": "Why houseplants die in winter", "lang": "en", "duration": "30-45",
+       "placement": "PlantCare app", "hook": true, "cta": true}'
 # → 201 {"id": "…", "status": "queued", "cost": 100, "eta_seconds": 420}
 
 # 2. Poll — every 20–30 s, NEVER more often than 15 s. Respect eta_seconds:
@@ -60,14 +67,15 @@ curl -fsSL -o video.mp4 "<result_url>"   # wget -O video.mp4 "<result_url>" work
 `metadata` in the final object is the posting pack (title/description/hashtags) —
 hand it to the user together with the file.
 
-Explicit params instead of a prompt → `POST /videos`:
+The quick endpoint (`POST /videos:quick`, MCP: `quick_video`) — one free-form
+prompt the server maps to params for you. Only for vague one-liners:
 
 ```bash
-curl -sS -X POST https://api.piratepress.fun/public/v1/videos \
-  -H "X-API-Key: $PIRATEPRESS_API_KEY" -H "Content-Type: application/json" \
+curl -sS -X POST https://api.piratepress.fun/public/v1/videos:quick \
+  -H "X-API-Key: $PIRATEPRESS_API_KEY" \
+  -H "Content-Type: application/json" \
   -H "Idempotency-Key: $(uuidgen)" \
-  -d '{"theme": "Why houseplants die in winter", "lang": "en", "duration": "30-45",
-       "placement": "PlantCare app", "hook": true, "cta": true}'
+  -d '{"prompt": "45s EN vertical about why houseplants die in winter, calm tone"}'
 ```
 
 Key params: `theme` (full sentence — one-word input yields garbage), `lang` (ru|en),
@@ -91,6 +99,11 @@ scene; `"lite"` — the same scenes animated image-to-video ("living video" — 
 counts as a heavy job under subscription fair-use). Without `bg_ai` the video gets a
 stock gameplay/satisfying background. Note: animating a USER-UPLOADED photo is not in
 the public API — `bg_ai: "lite"` animates scenes the service generates itself.
+
+**Background presets (`bg_preset`).** Ids come from the live catalog —
+`GET /bg-presets` (MCP: `list_bg_presets`) returns `[{name, videos}]`. Never invent
+an id (unknown ones fail validation or silently fall back); omit `bg_preset` for a
+random stock background.
 
 **Links as input.** The server does not "watch" arbitrary URLs inside a free-form
 prompt — route them explicitly (quick_video does this mapping for you, but explicit
