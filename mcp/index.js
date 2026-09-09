@@ -114,6 +114,15 @@ server.registerTool(
       "Returns {id, cost, eta_seconds}; generation takes minutes — poll with get_video_status or wait_video.",
     inputSchema: {
       theme: z.string().min(3).describe("What the video is about — a full sentence, not one word."),
+      theme_url: z
+        .array(z.string().url())
+        .optional()
+        .describe("Article/post URLs the story is based on (content source — the service fetches and reads them). Conflicts with theme: use one or the other."),
+      reference_url: z
+        .string()
+        .url()
+        .optional()
+        .describe("A YouTube/TikTok/Instagram video URL to base the video on — the service downloads it, transcribes the speech and clones the format. Use when the user gives a video link; add theme only if they want a different topic."),
       lang: z.enum(["ru", "en"]).optional().describe("Narration language (default en)."),
       duration: z
         .string()
@@ -147,7 +156,9 @@ server.registerTool(
     title: "Quick video",
     description:
       "Create a video from a single free-form prompt (POST /videos:quick) — the server-side LLM maps " +
-      "it to parameters. Best default for one-shot requests. Same response as generate_video.",
+      "it to parameters. Links in the prompt are routed automatically: page/article URLs become the content " +
+      "source, video URLs (YouTube/TikTok) clone the format. Best default for one-shot requests. " +
+      "Same response as generate_video.",
     inputSchema: {
       prompt: z
         .string()
