@@ -44,12 +44,15 @@ curl -sS -X POST https://api.piratepress.fun/public/v1/videos:quick \
 #    first poll no earlier than ~half the ETA.
 curl -sS https://api.piratepress.fun/public/v1/videos/<id> \
   -H "X-API-Key: $PIRATEPRESS_API_KEY"
-# status: queued | running | awaiting_review | done | error
+# status: queued | running | awaiting_review | done | error | refunded
 
 # 3. On done — download immediately; result_url is signed and dies in 7 days.
 #    Use the result_url VERBATIM from the fresh JSON response — it is an
 #    absolute URL; never rebuild, trim or reassemble it from parts, and never
 #    reuse a copy from truncated log output (a cut-off token → 401 invalid_token).
+#    result_url needs NO API key: if downloading through your sandbox is slow
+#    or blocked, hand the link to the user directly instead of proxying the
+#    file through yourself.
 curl -fsSL -o video.mp4 "<result_url>"   # wget -O video.mp4 "<result_url>" works too
 ```
 
@@ -136,7 +139,8 @@ Errors come as `{"error": {"code", "message"}}`.
 | `409 fair_use_exceeded` | Heavy-video quota on the subscription is exhausted for the month — offer a lighter config (no `bg_ai`, shorter duration) or dublone payment. |
 | `422 invalid_params` | Fix the body per `message` (e.g. `cta` without `placement`) and resubmit with a **new** Idempotency-Key. |
 | `401` | Key missing/revoked — ask the user for a fresh one (`/apikey`). |
-| Job `status: "error"` | Report the `error` field. Do not auto-retry paid generations without asking. |
+| Job `status: "error"` | Report the `error` field. The job failed with no doubloon charge (trial or externally paid). Do not auto-retry paid generations without asking. |
+| Job `status: "refunded"` | The job failed and the charge was **auto-refunded** — the `error` field says so, and `GET /balance` confirms it. Tell the user no doubloons were lost; never report it as money gone, and ask before resubmitting. |
 | `awaiting_review` | Director mode paused for script review — see docs for `POST /videos/{id}/review`, or tell the user to approve in the bot. |
 
 Hard rules: poll interval ≥ 15 s (aim 20–30), honor `eta_seconds` and `Retry-After`,

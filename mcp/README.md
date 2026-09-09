@@ -7,10 +7,10 @@ The server talks to `https://api.piratepress.fun/public/v1` and exposes five too
 
 | Tool | What it does |
 |---|---|
-| `generate_video` | Create a job with explicit params (`theme`, `lang`, `duration`, `placement`, `hook`, `cta`). Returns `{id, cost, eta_seconds}`. |
+| `generate_video` | Create a job with explicit params (`theme`/`theme_url`/`reference_url`, `lang`, `duration`, `placement`, `hook`, `cta`). Returns `{id, cost, eta_seconds}`. |
 | `quick_video` | One free-form `prompt` — a server-side LLM maps it to parameters. Best default for one-shot requests. |
-| `get_video_status` | Poll a job: `queued → running → done/error` (also `awaiting_review` in director mode). On `done`: `result_url` (signed mp4, TTL 7 days) + `metadata` (posting texts). |
-| `wait_video` | Block until `done`/`error` (polls every 20 s, MCP progress notifications, default timeout 30 min). |
+| `get_video_status` | Poll a job: `queued → running → done/error/refunded` (also `awaiting_review` in director mode; `refunded` = failed, doubloons auto-refunded). On `done`: `result_url` (signed mp4, TTL 7 days) + `metadata` (posting texts). |
+| `wait_video` | Block until `done`/`error`/`refunded` (polls every 20 s, MCP progress notifications, default timeout 30 min). |
 | `get_balance` | Wallet: `{dublones, subscription, fair_use_left}`. 1⛁ = 1₽. |
 
 Generation takes minutes (usually 2–15). Money (dublones) is charged when the job is **created**.
@@ -85,7 +85,7 @@ Add to your MCP config (`~/.kimi-code/mcp.json` or via the CLI):
   "mcpServers": {
     "piratepress": {
       "command": "node",
-      "args": ["/path/to/agents/mcp/index.js"],
+      "args": ["/path/to/content-farm/mcp/index.js"],
       "env": { "PIRATEPRESS_API_KEY": "pp_your_key_here" }
     }
   }

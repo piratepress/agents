@@ -189,7 +189,8 @@ server.registerTool(
   {
     title: "Get video status",
     description:
-      "Poll a generation job (GET /videos/{id}). Statuses: queued | running | awaiting_review | done | error. " +
+      "Poll a generation job (GET /videos/{id}). Statuses: queued | running | awaiting_review | done | error | refunded " +
+      "(refunded = failed with the doubloons auto-refunded to the balance). " +
       "On done returns result_url (signed mp4 link, TTL 7 days — download it) and metadata (posting texts).",
     inputSchema: {
       id: z.string().describe("Job id returned by generate_video / quick_video."),
@@ -262,7 +263,8 @@ server.registerTool(
 
         await reportProgress(job);
 
-        if (job.status === "done" || job.status === "error" || job.status === "awaiting_review") {
+        // refunded — терминальный (0.56.0): фейл с авто-возвратом дублонов
+        if (job.status === "done" || job.status === "error" || job.status === "refunded" || job.status === "awaiting_review") {
           return ok(job);
         }
         if (Date.now() + POLL_INTERVAL_MS > deadline) {
