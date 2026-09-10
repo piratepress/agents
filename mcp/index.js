@@ -156,8 +156,9 @@ server.registerTool(
       theme: z.string().min(3).describe("What the video is about — a full sentence, not one word."),
       theme_url: z
         .array(z.string().url())
+        .max(5)
         .optional()
-        .describe("Article/post URLs the story is based on (content source — the service fetches and reads them). Conflicts with theme: use one or the other."),
+        .describe("Content source URLs (max 5): articles/posts the story is based on, OR direct file links — pdf/txt/md, photos (jpg/png/webp — OCR'd), audio (mp3/wav/ogg/m4a — transcribed). Conflicts with theme: use one or the other."),
       reference_url: z
         .string()
         .url()
@@ -188,6 +189,11 @@ server.registerTool(
         .optional()
         .describe("AI-generated background instead of stock gameplay: 'illustrations' = AI art per scene; 'lite' = the same scenes animated image-to-video (living video — pricier, counts as a heavy job under the subscription fair-use quota)."),
       bg_preset: z.string().max(100).optional().describe("Stock background preset id (gameplay/satisfying packs) — get valid ids from list_bg_presets; omit for a random preset."),
+      bg_url: z
+        .array(z.string().url())
+        .max(5)
+        .optional()
+        .describe("Custom background by URL (max 5): YouTube/TikTok/Instagram video or channel links — downloaded via yt-dlp. Conflicts with bg_ai/bg_preset/bg_asset_id: pick one background source."),
       bg_fit: z.enum(["fill", "fit"]).optional().describe("Background framing: crop-fill (default) or fit whole frame."),
       overlays: z.boolean().optional().describe("Add infographic overlays (default false)."),
       overlay_count: z.number().int().min(1).max(5).optional().describe("How many overlays (1-5, default 3; needs overlays: true)."),

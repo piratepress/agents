@@ -85,7 +85,7 @@ Full `POST /videos` surface (everything is optional except a content source —
 |---|---|
 | Content | `theme`, `theme_url`, `lang` (ru\|en), `duration`, `style` (delivery), `genre` |
 | Advertising | `placement`, `hook`, `end_card`, `cta`, `cta_target_type` (bot\|site), `cta_target`, `cta_word`, `cta_limit` |
-| Background & visual | `bg_ai`, `bg_preset`, `bg_fit` (fill\|fit), `overlays`, `overlay_count` (1–5), `overlay_level` (1–3), `visual_style` |
+| Background & visual | `bg_ai`, `bg_preset`, `bg_url` (own background links, max 5), `bg_fit` (fill\|fit), `overlays`, `overlay_count` (1–5), `overlay_level` (1–3), `visual_style` |
 | Captions | `caption_mode` (word\|karaoke\|line), `caption_position` (top\|center\|bottom), `caption_scale` (0.01–0.2) |
 | Music & voice | `music` (none\|ai\|song — "song" sings the story as a track), `music_mood`, `voice_asset_id` (voice clone from the library — see below) |
 | Files (media library) | `theme_asset_id`, `bg_asset_id`, `music_asset_id`, `banner_asset_id`, `banner_source_asset_id`, `cover_source_asset_id`, `reference_asset_id` — ids from `POST /assets` / `GET /assets` (see below) |
@@ -105,10 +105,20 @@ the public API — `bg_ai: "lite"` animates scenes the service generates itself.
 prompt — route them explicitly (quick_video does this mapping for you, but explicit
 is more reliable):
 - Article/post/page the story is based on → `theme_url: ["https://…"]`
-  (the service fetches and reads the text). Conflicts with `theme` — use one or the other.
+  (the service fetches and reads the text). **Direct file links work too:**
+  pdf/txt/md documents, jpg/png/webp photos (OCR'd by a vision model) and
+  mp3/wav/ogg/m4a audio (transcribed) are downloaded and read as theme sources.
+  Max 5 URLs, ≤ 20 MB per file. Conflicts with `theme` — use one or the other.
 - YouTube/TikTok/Instagram video to base the clip on → `reference_url: "https://…"`
   (downloaded, speech transcribed, format/pacing/voice cloned; add `theme` only if the
   user wants a different topic than the reference's own).
+- Own background by link → `bg_url: ["https://youtu.be/…"]` (video or whole
+  channel/playlist via yt-dlp, max 5 links). Conflicts with
+  `bg_ai`/`bg_preset`/`bg_asset_id` — one background source per order.
+
+All URL inputs are SSRF-guarded: public http(s) only, private/loopback/metadata
+addresses and redirects to them are rejected (`422 invalid_params` at order time,
+or a refunded job if the target drops below the public net during fetch).
 
 ## 2. Money — check before you spend
 
@@ -214,10 +224,10 @@ order is rejected with `422 invalid_params` before any charge.
 
 ### Bot-only (not in the public API)
 
-Top-ups and subscriptions, custom background URLs (`bg_url`), and channel
-autopilot (scheduled posting) live in @piratepress_bot. If the user asks for one
-of these — point them to the bot instead of improvising; everything else an order
-needs is in the params table above.
+Top-ups and subscriptions, and channel autopilot (scheduled posting) live in
+@piratepress_bot. If the user asks for one of these — point them to the bot
+instead of improvising; everything else an order needs is in the params table
+above.
 
 ## 4. Errors and what to do
 
