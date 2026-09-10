@@ -3,7 +3,7 @@
 MCP server for the [PiratePress](https://piratepress.fun) public API — generate viral short-form
 videos straight from your AI agent (Claude Code, Kimi Code, Claude Desktop, Cursor, …).
 
-The server talks to `https://api.piratepress.fun/public/v1` and exposes five tools:
+The server talks to `https://api.piratepress.fun/public/v1` and exposes nine tools:
 
 | Tool | What it does |
 |---|---|
@@ -12,7 +12,8 @@ The server talks to `https://api.piratepress.fun/public/v1` and exposes five too
 | `get_video_status` | Poll a job: `queued → running → done/error/refunded` (also `awaiting_review` in director mode; `refunded` = failed, doubloons auto-refunded). On `done`: `result_url` (signed mp4, TTL 7 days) + `metadata` (posting texts). On `awaiting_review`: `story_text` (the script under review). |
 | `wait_video` | Block until `done`/`error`/`refunded`/`awaiting_review` (polls every 20 s, MCP progress notifications, default timeout 30 min). |
 | `review_video` | Answer a script review in director mode: `approve` / `edit` / `regen` (read `story_text` from the status first). |
-| `list_assets` | User's media library (voice clones etc.) — ids for `voice_asset_id`. |
+| `upload_asset` | Upload local files to the media library (theme sources, own background, own track, banner, reference video, voice sample — paid). Returns the asset `id` for the `*_asset_id` fields of `generate_video`. Limits: 20 files, 20 MB/file, 2 GB library. |
+| `list_assets` | User's media library (voice clones, theme packs etc.) — ids for the `*_asset_id` fields. |
 | `list_bg_presets` | Stock background presets — valid ids for `bg_preset`. |
 | `get_balance` | Wallet: `{dublones, subscription, fair_use_left}`. 1⛁ = 1₽. |
 

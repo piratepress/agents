@@ -10,7 +10,7 @@
 
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -90,6 +90,43 @@ async function api(path, { method = "GET", body, idempotencyKey } = {}) {
   throw new Error(`PiratePress API error [${code || res.status}]: ${message}`);
 }
 
+/** Multipart upload of local files to POST /assets. Same error handling as api(). */
+async function apiUpload(kind, name, paths) {
+  const form = new FormData();
+  form.append("kind", kind);
+  form.append("name", name);
+  for (const p of paths) {
+    form.append("files", new Blob([readFileSync(p)]), basename(p));
+  }
+  const res = await fetch(`${API_URL}/public/v1/assets`, {
+    method: "POST",
+    headers: { "X-API-Key": API_KEY },
+    body: form,
+  });
+  let data = null;
+  try {
+    data = await res.json();
+  } catch {
+    /* non-JSON body */
+  }
+  if (res.ok) return data;
+  const code = data?.error?.code;
+  const message = data?.error?.message || `HTTP ${res.status}`;
+  if (res.status === 402 || code === "insufficient_funds") {
+    throw new Error(
+      `Insufficient balance (${message}). Top up dublones in @piratepress_bot (Telegram) — 1⛁ = 1₽.`
+    );
+  }
+  if (res.status === 429) {
+    const ra = retryAfterSeconds(res);
+    throw new Error(
+      `Rate limited by the API.${ra ? ` Retry after ${ra}s (Retry-After).` : ""} ` +
+        "Limits: 10 active jobs, 30 POST/min."
+    );
+  }
+  throw new Error(`PiratePress API error [${code || res.status}]: ${message}`);
+}
+
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 function ok(data) {
@@ -163,7 +200,15 @@ server.registerTool(
       // Музыка и голос
       music: z.enum(["none", "ai", "song"]).optional().describe("Soundtrack: none (default) | AI background music | song — the story sung as a track."),
       music_mood: z.string().max(200).optional().describe("Music mood prompt (default: auto from the story)."),
-      voice_asset_id: z.string().optional().describe("Voice clone asset id from the user's library (list via list_assets; clones are uploaded in the bot)."),
+      voice_asset_id: z.string().optional().describe("Voice clone asset id from the user's library (list via list_assets, upload via upload_asset)."),
+      // Файлы из медиатеки (0.59.11): id ассета из upload_asset / list_assets
+      theme_asset_id: z.string().optional().describe("Theme from uploaded files (asset kind theme_pack: txt/md/pdf, photos, voice notes). Use INSTEAD of theme when the user's content is in files."),
+      banner_asset_id: z.string().optional().describe("Ready-made banner (asset kind banner_video) overlaid on the video."),
+      banner_source_asset_id: z.string().optional().describe("Source pack for an AI-generated banner (asset kind banner_source_pack: images/texts/fonts)."),
+      cover_source_asset_id: z.string().optional().describe("Source pack for an AI-generated cover (asset kind cover_source_pack)."),
+      bg_asset_id: z.string().optional().describe("Custom background video pool (asset kind bg_pack: mp4/mov/webm/mkv). Conflicts with bg_ai/bg_preset — pick one background source."),
+      music_asset_id: z.string().optional().describe("Custom music track (asset kind music_track). Conflicts with music other than 'none'."),
+      reference_asset_id: z.string().optional().describe("Format-clone from an uploaded video (asset kind reference) — like reference_url but a file from the library."),
       // Прочее
       director_mode: z.boolean().optional().describe("Pause after the script for review: the job stops at awaiting_review — continue with review_video."),
       count: z.number().int().min(1).max(50).optional().describe("Batch: N videos of the same config in one order (1-50, default 1)."),
@@ -357,14 +402,57 @@ server.registerTool(
   {
     title: "List media library",
     description:
-      "List the user's media library (GET /assets): voice clones, banners, etc. " +
-      "Use an asset id as voice_asset_id in generate_video. New assets are uploaded in the bot — " +
-      "the public API has no upload.",
+      "List the user's media library (GET /assets): voice clones, banners, theme packs, etc. " +
+      "Asset ids plug into generate_video as voice_asset_id / theme_asset_id / bg_asset_id / " +
+      "music_asset_id / banner_asset_id / banner_source_asset_id / cover_source_asset_id / reference_asset_id. " +
+      "Upload new assets with upload_asset (local files) or in the bot.",
     inputSchema: {},
   },
   async () => {
     try {
       return ok(await api("/assets"));
+    } catch (err) {
+      return fail(err);
+    }
+  }
+);
+
+server.registerTool(
+  "upload_asset",
+  {
+    title: "Upload media asset",
+    description:
+      "Upload local files to the user's media library (POST /assets, multipart) — like attaching files " +
+      "in the bot wizard. Kinds: theme_pack (story sources: txt/md/pdf, photos, voice notes, zip), " +
+      "bg_pack (own background videos), music_track (own soundtrack), banner_video (ready mp4/png banner), " +
+      "banner_source_pack / cover_source_pack (sources for AI banner/cover), reference (video to clone the format from), " +
+      "voice_clone (voice sample — PAID, charged like in the bot). " +
+      "Limits: 20 files max, 20 MB per file, per-kind extension whitelist, 2 GB library quota. " +
+      "Returns the asset {id, kind, name} — pass the id to generate_video as the matching *_asset_id field.",
+    inputSchema: {
+      kind: z
+        .enum([
+          "theme_pack",
+          "bg_pack",
+          "music_track",
+          "banner_video",
+          "banner_source_pack",
+          "cover_source_pack",
+          "reference",
+          "voice_clone",
+        ])
+        .describe("Asset kind — decides which generate_video field the id fits."),
+      name: z.string().min(1).max(200).describe("Human-readable asset name."),
+      paths: z
+        .array(z.string())
+        .min(1)
+        .max(20)
+        .describe("Absolute local file paths to upload (1-20; single-file kinds: voice_clone, banner_video, music_track, reference)."),
+    },
+  },
+  async ({ kind, name, paths }) => {
+    try {
+      return ok(await apiUpload(kind, name, paths));
     } catch (err) {
       return fail(err);
     }

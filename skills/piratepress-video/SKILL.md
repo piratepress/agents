@@ -12,8 +12,8 @@ parameter reference lives at **https://docs.piratepress.fun** (OpenAPI:
 
 **MCP alternative:** if the `piratepress` MCP server is installed in this environment,
 prefer its tools (`quick_video`, `generate_video`, `wait_video`, `get_video_status`,
-`review_video`, `list_assets`, `get_balance`) over raw curl — same API, less
-bookkeeping. The flows below stay identical. One-liner install:
+`review_video`, `upload_asset`, `list_assets`, `list_bg_presets`, `get_balance`) over
+raw curl — same API, less bookkeeping. The flows below stay identical. One-liner install:
 `curl -fsSL https://piratepress.fun/install.sh | bash`.
 
 ## 0. Get the API key
@@ -88,6 +88,7 @@ Full `POST /videos` surface (everything is optional except a content source —
 | Background & visual | `bg_ai`, `bg_preset`, `bg_fit` (fill\|fit), `overlays`, `overlay_count` (1–5), `overlay_level` (1–3), `visual_style` |
 | Captions | `caption_mode` (word\|karaoke\|line), `caption_position` (top\|center\|bottom), `caption_scale` (0.01–0.2) |
 | Music & voice | `music` (none\|ai\|song — "song" sings the story as a track), `music_mood`, `voice_asset_id` (voice clone from the library — see below) |
+| Files (media library) | `theme_asset_id`, `bg_asset_id`, `music_asset_id`, `banner_asset_id`, `banner_source_asset_id`, `cover_source_asset_id`, `reference_asset_id` — ids from `POST /assets` / `GET /assets` (see below) |
 | Misc | `director_mode` (pause for script review), `count` (1–50, batch in one order), `watermark` |
 
 **AI background (`bg_ai`).** Two values: `"illustrations"` — AI art generated per
@@ -171,19 +172,52 @@ curl -sS -X POST .../videos/<id>/review -H "X-API-Key: $PIRATEPRESS_API_KEY" \
 
 `409 not_awaiting_review` means the job is not waiting for a decision right now.
 
-### Voice clones and the media library
+### Files and the media library (uploads)
 
-`voice_asset_id` takes an asset id from the user's library — list it via
-`GET /assets` (MCP: `list_assets`). Uploading new assets (voice clone from a
-10-second sample, banners) happens **in the bot only** — the public API has no
-upload endpoint.
+Local files (photos, videos, documents, audio) go into the user's media library via
+`POST /assets` (multipart) — the same inputs the bot wizard accepts. The returned
+asset `id` plugs into `POST /videos` as the matching `*_asset_id` field:
+
+```bash
+# 1. Upload (MCP: upload_asset). kind decides which order field the id fits.
+curl -sS -X POST https://api.piratepress.fun/public/v1/assets \
+  -H "X-API-Key: $PIRATEPRESS_API_KEY" \
+  -F "kind=theme_pack" -F "name=reddit thread sources" \
+  -F "files=@notes.txt" -F "files=@screenshot.png"
+# → 201 {"id": "…", "kind": "theme_pack", "name": "…", "created_at": "…"}
+
+# 2. Order with the asset id
+curl -sS -X POST https://api.piratepress.fun/public/v1/videos \
+  -H "X-API-Key: $PIRATEPRESS_API_KEY" -H "Content-Type: application/json" \
+  -H "Idempotency-Key: $(uuidgen)" \
+  -d '{"theme_asset_id": "<id>", "lang": "en", "duration": "30-45"}'
+```
+
+Kinds and what they accept (per-kind extension whitelist; wrong kind in an order
+field → `422 invalid_params`):
+
+| kind | Accepts | Order field |
+|---|---|---|
+| `theme_pack` | txt/md/pdf, jpg/png/webp, audio (voice notes), zip | `theme_asset_id` (content source — replaces `theme`) |
+| `bg_pack` | mp4/mov/webm/mkv, zip | `bg_asset_id` (own background pool; conflicts with `bg_ai`/`bg_preset`) |
+| `music_track` | audio or video with an audio track | `music_asset_id` (conflicts with `music` ≠ none) |
+| `banner_video` | mp4/mov/webm/mkv or png/jpg | `banner_asset_id` (ready banner overlay) |
+| `banner_source_pack` | images, txt/md, fonts, audio, zip | `banner_source_asset_id` (AI banner sources) |
+| `cover_source_pack` | same as banner sources | `cover_source_asset_id` (AI cover sources) |
+| `reference` | one video file | `reference_asset_id` (format clone, like `reference_url` but a file) |
+| `voice_clone` | one audio/video sample | `voice_asset_id` — **paid** like in the bot |
+
+Limits: ≤ 20 files per asset, ≤ 20 MB per file, 2 GB total library quota.
+Uploads count toward the shared 30 POST/min rate limit. `GET /assets`
+(MCP: `list_assets`) lists the library; a foreign or wrong-kind asset id in an
+order is rejected with `422 invalid_params` before any charge.
 
 ### Bot-only (not in the public API)
 
-Top-ups and subscriptions, asset uploads, banner overlay / AI banner / AI cover,
-custom background URLs, and channel autopilot (scheduled posting) live in
-@piratepress_bot. If the user asks for one of these — point them to the bot
-instead of improvising; everything else an order needs is in the params table above.
+Top-ups and subscriptions, custom background URLs (`bg_url`), and channel
+autopilot (scheduled posting) live in @piratepress_bot. If the user asks for one
+of these — point them to the bot instead of improvising; everything else an order
+needs is in the params table above.
 
 ## 4. Errors and what to do
 
