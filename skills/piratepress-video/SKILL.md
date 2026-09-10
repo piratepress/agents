@@ -60,6 +60,10 @@ curl -fsSL -o video.mp4 "<result_url>"   # wget -O video.mp4 "<result_url>" work
 `metadata` in the final object is the posting pack (title/description/hashtags) —
 hand it to the user together with the file.
 
+Batch orders (`count` > 1): `result_urls` lists every rendered clip
+(output.mp4, output_2.mp4, …) — download them all; `result_url` is just the
+first one. `metadata` is the pack of the first clip.
+
 Explicit params instead of a prompt → `POST /videos`:
 
 ```bash
