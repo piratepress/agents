@@ -1,6 +1,6 @@
 {
   "name": "@piratepress/mcp",
-  "version": "0.59.11",
+  "version": "0.59.12",
   "description": "MCP server for the PiratePress public API — generate viral short videos from AI agents (Claude Code, Kimi Code, Claude Desktop, …)",
   "type": "module",
   "license": "MIT",
