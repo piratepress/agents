@@ -11,8 +11,8 @@ parameter reference lives at **https://docs.piratepress.fun** (OpenAPI:
 `https://api.piratepress.fun/docs`) — check there before using a parameter not shown here.
 
 **MCP alternative:** if the `piratepress` MCP server is installed in this environment,
-prefer its tools (`generate_video`, `quick_video`, `wait_video`, `get_video_status`,
-`review_video`, `list_assets`, `list_bg_presets`, `get_balance`) over raw curl — same API, less
+prefer its tools (`quick_video`, `generate_video`, `wait_video`, `get_video_status`,
+`review_video`, `list_assets`, `get_balance`) over raw curl — same API, less
 bookkeeping. The flows below stay identical. One-liner install:
 `curl -fsSL https://piratepress.fun/install.sh | bash`.
 
@@ -31,21 +31,14 @@ Base URL: `https://api.piratepress.fun/public/v1`
 
 Generation takes **minutes** (usually 2–15). Never block in a tight loop.
 
-**Prefer explicit params (`POST /videos`) over the quick endpoint.** You are an
-agent — mapping the user's brief to parameters is exactly your job; the quick
-endpoint re-does that mapping with a server-side LLM, which can drift off-topic,
-hides the cost until after creation, and is throttled to a few calls per hour.
-Use quick only for genuinely vague one-liners.
-
 ```bash
-# 1. Create the job — explicit params. Idempotency-Key protects against
-#    double-charging on retries.
-curl -sS -X POST https://api.piratepress.fun/public/v1/videos \
+# 1. Create the job — free-form prompt, server-side LLM maps it to params.
+#    Idempotency-Key protects against double-charging on retries.
+curl -sS -X POST https://api.piratepress.fun/public/v1/videos:quick \
   -H "X-API-Key: $PIRATEPRESS_API_KEY" \
   -H "Content-Type: application/json" \
   -H "Idempotency-Key: $(uuidgen)" \
-  -d '{"theme": "Why houseplants die in winter", "lang": "en", "duration": "30-45",
-       "placement": "PlantCare app", "hook": true, "cta": true}'
+  -d '{"prompt": "45s EN vertical about why houseplants die in winter, calm tone"}'
 # → 201 {"id": "…", "status": "queued", "cost": 100, "eta_seconds": 420}
 
 # 2. Poll — every 20–30 s, NEVER more often than 15 s. Respect eta_seconds:
@@ -67,15 +60,14 @@ curl -fsSL -o video.mp4 "<result_url>"   # wget -O video.mp4 "<result_url>" work
 `metadata` in the final object is the posting pack (title/description/hashtags) —
 hand it to the user together with the file.
 
-The quick endpoint (`POST /videos:quick`, MCP: `quick_video`) — one free-form
-prompt the server maps to params for you. Only for vague one-liners:
+Explicit params instead of a prompt → `POST /videos`:
 
 ```bash
-curl -sS -X POST https://api.piratepress.fun/public/v1/videos:quick \
-  -H "X-API-Key: $PIRATEPRESS_API_KEY" \
-  -H "Content-Type: application/json" \
+curl -sS -X POST https://api.piratepress.fun/public/v1/videos \
+  -H "X-API-Key: $PIRATEPRESS_API_KEY" -H "Content-Type: application/json" \
   -H "Idempotency-Key: $(uuidgen)" \
-  -d '{"prompt": "45s EN vertical about why houseplants die in winter, calm tone"}'
+  -d '{"theme": "Why houseplants die in winter", "lang": "en", "duration": "30-45",
+       "placement": "PlantCare app", "hook": true, "cta": true}'
 ```
 
 Key params: `theme` (full sentence — one-word input yields garbage), `lang` (ru|en),
@@ -100,10 +92,9 @@ counts as a heavy job under subscription fair-use). Without `bg_ai` the video ge
 stock gameplay/satisfying background. Note: animating a USER-UPLOADED photo is not in
 the public API — `bg_ai: "lite"` animates scenes the service generates itself.
 
-**Background presets (`bg_preset`).** Ids come from the live catalog —
-`GET /bg-presets` (MCP: `list_bg_presets`) returns `[{name, videos}]`. Never invent
-an id (unknown ones fail validation or silently fall back); omit `bg_preset` for a
-random stock background.
+**Stock background preset (`bg_preset`).** A preset id from the live catalog —
+`GET /public/v1/bg-presets` (MCP: `list_bg_presets`). Unknown ids are rejected with
+`422 invalid_params` at order time — never guess names, read the catalog first.
 
 **Links as input.** The server does not "watch" arbitrary URLs inside a free-form
 prompt — route them explicitly (quick_video does this mapping for you, but explicit
@@ -157,15 +148,16 @@ same job polls and saves the mp4 + metadata into the user's content folder.
 - `placement` — the product must appear **in the story**, not as an ad read: give the
   product plus context ("PlantCare app that reminds you to water"), not just a brand name.
 - `hook: true` (default) — first-seconds hook; keep it on for feed traffic.
-- `cta: true` — end-card call to action; **requires `placement`**, and `cta_target`
-  (`bot` | `site` + URL/handle) tells where to send viewers.
+- `cta: true` — simple end-card call to action; **requires `placement`**.
+  **Incompatible with `cta_target_type`/`cta_target`/`cta_word`/`cta_limit`** — those
+  four are the *targeted* CTA (send viewers to your bot or site, optional codeword
+  attribution) and are used **without** `cta`. `cta_target` = bot handle with `@` or
+  site URL. Mixing the two modes returns `422 invalid_params`.
 
 ### Director mode (script review)
 
 With `director_mode: true` the job pauses after the script at `awaiting_review`
-(the MCP `wait_video` returns there too). The status response then carries the
-script itself in `story_text` — **read it and show it to the user before
-deciding**; never approve blind. Continue with:
+(the MCP `wait_video` returns there too). Continue with:
 
 ```bash
 curl -sS -X POST .../videos/<id>/review -H "X-API-Key: $PIRATEPRESS_API_KEY" \
@@ -202,7 +194,7 @@ Errors come as `{"error": {"code", "message"}}`.
 | `401` | Key missing/revoked — ask the user for a fresh one (`/apikey`). |
 | Job `status: "error"` | Report the `error` field. The job failed with no doubloon charge (trial or externally paid). Do not auto-retry paid generations without asking. |
 | Job `status: "refunded"` | The job failed and the charge was **auto-refunded** — the `error` field says so, and `GET /balance` confirms it. Tell the user no doubloons were lost; never report it as money gone, and ask before resubmitting. |
-| `awaiting_review` | Director mode paused for script review — the same response includes `story_text`; show it to the user, then answer via `POST /videos/{id}/review` (MCP: `review_video`). |
+| `awaiting_review` | Director mode paused for script review — see docs for `POST /videos/{id}/review`, or tell the user to approve in the bot. |
 
 Hard rules: poll interval ≥ 15 s (aim 20–30), honor `eta_seconds` and `Retry-After`,
 one Idempotency-Key per logical job, download `result_url` before its 7-day TTL ends.
